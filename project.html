@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Be My Valentine?</title>
+    <style>
+        /* --- RESET & BASE STYLES --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none; /* Prevent text selection during frantic clicking */
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #ffe6eb;
+            overflow: hidden; /* Prevent scrolling */
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #d6336c;
+        }
+
+        /* --- DESKTOP BLOCKER --- */
+        #desktop-message {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #ffe6eb;
+            z-index: 9999;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        #desktop-message h1 {
+            font-size: 2rem;
+            color: #d6336c;
+            margin-bottom: 1rem;
+        }
+
+        /* Show blocker on screens wider than mobile */
+        @media (min-width: 431px) {
+            #desktop-message {
+                display: flex;
+            }
+            #app-container {
+                display: none !important;
+            }
+        }
+
+        /* --- MAIN APP CONTAINER --- */
+        #app-container {
+            position: relative;
+            width: 100%;
+            max-width: 430px;
+            height: 100%;
+            background: linear-gradient(180deg, #fff0f3 0%, #ffdeeb 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            /* justify-content: center; Vertically center content - Removed to allow scrolling */
+            overflow-y: auto; /* Allow vertical scrolling */
+            box-shadow: 0 0 20px rgba(255, 107, 107, 0.1);
+        }
+
+        /* --- FLOATING BACKGROUND FLOWERS --- */
+        .flower-bg {
+            position: absolute;
+            font-size: 1.5rem;
+            opacity: 0.4;
+            animation: floatUp linear infinite;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(110vh) rotate(0deg); opacity: 0; }
+            20% { opacity: 0.6; }
+            80% { opacity: 0.6; }
+            100% { transform: translateY(-10vh) rotate(360deg); opacity: 0; }
+        }
+
+        /* --- CONTENT WRAPPER --- */
+        .content {
+            z-index: 10;
+            text-align: center;
+            width: 100%;
+            padding: 40px 20px; /* Added top/bottom padding */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start; /* Changed from center to prevent top cutting */
+            flex-grow: 1; /* Allow it to fill space so footer sits at bottom */
+            gap: 1.5rem;
+            transition: opacity 0.5s ease;
+        }
+
+        /* --- TYPOGRAPHY --- */
+        h1.title {
+            font-size: 2rem;
+            line-height: 1.3; /* Added line-height to prevent clipping */
+            font-weight: 800;
+            color: #ff477e;
+            text-shadow: 2px 2px 0px rgba(255, 255, 255, 0.8);
+            margin-bottom: 0.5rem;
+            animation: bounceIn 1s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        }
+
+        p.subtitle {
+            font-size: 1.3rem;
+            color: #d6336c;
+            font-weight: 600;
+            min-height: 2em; /* Prevent layout shift when text changes */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* --- CARTOON CHARACTER (SVG) --- */
+        .character-container {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto;
+            position: relative;
+            transition: transform 0.3s ease;
+        }
+        
+        /* Simple bobbing animation for the character */
+        .character-container svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+            animation: bob 3s ease-in-out infinite;
+        }
+
+        @keyframes bob {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        /* --- BUTTONS --- */
+        .button-group {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            align-items: center;
+            margin-top: 10px;
+            position: relative;
+            height: 80px; /* Space for growing buttons */
+        }
+
+        button {
+            border: none;
+            outline: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        #btn-yes {
+            background-color: #ff4757;
+            color: white;
+            z-index: 20; /* Ensure Yes eventually covers No */
+        }
+
+        #btn-no {
+            background-color: #ffeaa7;
+            color: #d63031;
+        }
+
+        /* --- SUCCESS MESSAGE SECTION (Hidden by default) --- */
+        #success-section {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start; /* Changed from center to allow scrolling of long content */
+            text-align: center;
+            flex-grow: 1; /* Allow it to fill space */
+            padding: 4rem 2rem 2rem 2rem; /* Increased top padding */
+            animation: fadeIn 1s ease;
+        }
+
+        .valentine-note {
+            background: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 20px;
+            margin-top: 20px;
+            border: 2px dashed #ff4757;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: #c44569;
+            max-width: 90%;
+            animation: slideUp 0.8s ease 0.5s both;
+        }
+
+        /* --- ANIMATIONS --- */
+        @keyframes bounceIn {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* --- CANVAS FOR FIREWORKS --- */
+        #fireworks-canvas {
+            position: fixed; /* Changed from absolute to fixed so it stays on screen during scroll */
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        /* --- FOOTER --- */
+        .app-footer {
+            width: 100%;
+            text-align: center;
+            padding: 20px;
+            color: #d6336c;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-top: auto;
+            z-index: 60;
+            opacity: 0.6; /* Faded effect */
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Desktop Block Message -->
+    <div id="desktop-message">
+        <h1>Please open on mobile 💕</h1>
+        <p>This surprise is designed for your phone screen.</p>
+    </div>
+
+    <!-- Main Mobile Container -->
+    <div id="app-container">
+        <!-- Floating Background Flowers (Generated by JS) -->
+        <div id="bg-flowers"></div>
+
+        <!-- Canvas for fireworks -->
+        <canvas id="fireworks-canvas"></canvas>
+
+        <!-- QUESTION SECTION -->
+        <div id="question-section" class="content">
+            <h1 class="title" id="welcome-text">Welcome Tandy 💖</h1>
+            
+            <div class="character-container" id="char-question">
+                <!-- Cute Bear Holding Flowers SVG -->
+                <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Body -->
+                    <circle cx="100" cy="120" r="60" fill="#f8c291"/>
+                    <!-- Ears -->
+                    <circle cx="60" cy="70" r="20" fill="#f8c291"/>
+                    <circle cx="140" cy="70" r="20" fill="#f8c291"/>
+                    <circle cx="60" cy="70" r="10" fill="#e58e26"/>
+                    <circle cx="140" cy="70" r="10" fill="#e58e26"/>
+                    <!-- Eyes -->
+                    <circle cx="80" cy="110" r="5" fill="#2d3436"/>
+                    <circle cx="120" cy="110" r="5" fill="#2d3436"/>
+                    <!-- Blush -->
+                    <circle cx="70" cy="125" r="7" fill="#ff7979" opacity="0.6"/>
+                    <circle cx="130" cy="125" r="7" fill="#ff7979" opacity="0.6"/>
+                    <!-- Snout -->
+                    <ellipse cx="100" cy="130" rx="15" ry="10" fill="#fff"/>
+                    <ellipse cx="100" cy="128" rx="5" ry="3" fill="#2d3436"/>
+                    <!-- Hands -->
+                    <circle cx="60" cy="150" r="15" fill="#f8c291"/>
+                    <circle cx="140" cy="150" r="15" fill="#f8c291"/>
+                    <!-- Flower Bouquet -->
+                    <path d="M100 150 L100 180" stroke="#2ecc71" stroke-width="4"/>
+                    <path d="M100 150 L90 140 L110 140 Z" fill="#eb4d4b"/>
+                    <circle cx="90" cy="140" r="5" fill="#ff6b81"/>
+                    <circle cx="110" cy="140" r="5" fill="#ff6b81"/>
+                    <circle cx="100" cy="135" r="5" fill="#ff6b81"/>
+                </svg>
+            </div>
+
+            <p class="subtitle" id="main-question">Would you be my Valentine?</p>
+
+            <div class="button-group">
+                <button id="btn-yes">YES</button>
+                <button id="btn-no">NO</button>
+            </div>
+        </div>
+
+        <!-- SUCCESS SECTION -->
+        <div id="success-section">
+            <h1 class="title">YESSSS!!! 🎉</h1>
+            
+            <div class="character-container" id="char-success">
+                <!-- Happy Waving Bear SVG -->
+                <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                     <!-- Body -->
+                     <circle cx="100" cy="120" r="60" fill="#f8c291"/>
+                     <!-- Ears -->
+                     <circle cx="60" cy="70" r="20" fill="#f8c291"/>
+                     <circle cx="140" cy="70" r="20" fill="#f8c291"/>
+                     <circle cx="60" cy="70" r="10" fill="#e58e26"/>
+                     <circle cx="140" cy="70" r="10" fill="#e58e26"/>
+                     <!-- Happy Eyes (Arcs) -->
+                     <path d="M70 110 Q80 100 90 110" stroke="#2d3436" stroke-width="3" fill="none"/>
+                     <path d="M110 110 Q120 100 130 110" stroke="#2d3436" stroke-width="3" fill="none"/>
+                     <!-- Blush -->
+                     <circle cx="65" cy="125" r="7" fill="#ff7979" opacity="0.6"/>
+                     <circle cx="135" cy="125" r="7" fill="#ff7979" opacity="0.6"/>
+                     <!-- Snout & Smile -->
+                     <ellipse cx="100" cy="130" rx="15" ry="10" fill="#fff"/>
+                     <ellipse cx="100" cy="128" rx="5" ry="3" fill="#2d3436"/>
+                     <path d="M95 135 Q100 138 105 135" stroke="#2d3436" stroke-width="2" fill="none"/>
+                     <!-- Hands Up -->
+                     <circle cx="50" cy="90" r="15" fill="#f8c291"/>
+                     <circle cx="150" cy="90" r="15" fill="#f8c291"/>
+                     <!-- Hearts Floating -->
+                     <text x="100" y="50" font-size="20" fill="#e84118" opacity="0.8">❤️</text>
+                     <text x="140" y="60" font-size="15" fill="#e84118" opacity="0.6">❤️</text>
+                     <text x="60" y="60" font-size="15" fill="#e84118" opacity="0.6">❤️</text>
+                </svg>
+            </div>
+
+            <h2 id="thank-you-msg" style="color: #ff4757; font-size: 1.5rem; margin-top: 1rem;">Thank you, Babe ❤️</h2>
+
+            <div class="valentine-note">
+                <p id="long-message">
+                    You make my world brighter every single day.<br>
+                    You are my sunshine on a cloudy day.<br>
+                    You are my best friend, my everything.<br><br>
+                    I’m so lucky to love you.<br><br>
+                    Happy Valentine’s Day in Advance 💕🌸
+                </p>
+            </div>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="app-footer">
+            I love you so so much Babe ❤️
+        </div>
+
+    </div>
+
+    <script>
+        // ==========================================
+        // 🔧 CUSTOMIZE TEXT HERE
+        // ==========================================
+        const CONFIG = {
+            welcomeText: "Welcome Tawanda 💖",
+            questionText: "Would you be my Valentine?",
+            noButtonTexts: ["No", "Are you sure?", "Babe please 🥺", "Don't do this!", "You're breaking my heart 💔", "Just click YES!"],
+            thankYouText: "Thank you, Babe ❤️",
+            longMessage: " You make my world brighter every single day.<br>You are my sunshine on a cloudy day.<br>You are my best friend, my everything.<br><br>I’m so lucky to love you.<br><br>Happy Valentine’s Day in Advance 💕🌸"};
+
+        // ==========================================
+        // 🌸 INIT & DOM ELEMENTS
+        // ==========================================
+        const btnYes = document.getElementById('btn-yes');
+        const btnNo = document.getElementById('btn-no');
+        const questionText = document.getElementById('main-question');
+        const welcomeText = document.getElementById('welcome-text');
+        const questionSection = document.getElementById('question-section');
+        const successSection = document.getElementById('success-section');
+        const thankYouMsg = document.getElementById('thank-you-msg');
+        const longMsg = document.getElementById('long-message');
+        const bgContainer = document.getElementById('bg-flowers');
+        
+        // Apply Config
+        welcomeText.textContent = CONFIG.welcomeText;
+        questionText.textContent = CONFIG.questionText;
+        thankYouMsg.textContent = CONFIG.thankYouText;
+        longMsg.innerHTML = CONFIG.longMessage;
+
+        // State
+        let noClickCount = 0;
+        const maxNoClicks = 5;
+
+        // ==========================================
+        // 🎭 INTERACTION LOGIC
+        // ==========================================
+        
+        // Handle "NO" Click
+        btnNo.addEventListener('click', () => {
+            noClickCount++;
+            
+            // 1. Change text above buttons
+            if (noClickCount === 1) {
+                questionText.textContent = "Babe please 🥺";
+            } else if (noClickCount === 2) {
+                questionText.textContent = "Really? 🥺💔";
+            } else {
+                questionText.textContent = "Don't be mean! 😭";
+            }
+
+            // 2. Change NO button text
+            const textIndex = Math.min(noClickCount, CONFIG.noButtonTexts.length - 1);
+            btnNo.textContent = CONFIG.noButtonTexts[textIndex];
+
+            // 3. Grow YES button
+            // Base scale is 1. Increase by 0.4 each click
+            const currentScale = 1 + (noClickCount * 0.4);
+            btnYes.style.transform = `scale(${currentScale})`;
+
+            // 4. Shrink/Move NO button (Playful trick)
+            // Move slightly random to make it annoying to catch
+            const randomX = (Math.random() - 0.5) * 50;
+            const randomY = (Math.random() - 0.5) * 50;
+            
+            btnNo.style.transform = `scale(${1 - (noClickCount * 0.1)}) translate(${randomX}px, ${randomY}px)`;
+
+            // 5. Final State: No button disappears/unclickable
+            if (noClickCount >= maxNoClicks) {
+                btnNo.style.opacity = '0';
+                btnNo.style.pointerEvents = 'none';
+                questionText.textContent = "Okay, you have no choice now! 😈💖";
+            }
+        });
+
+        // Handle "YES" Click
+        btnYes.addEventListener('click', () => {
+            // Hide Question Section
+            questionSection.style.display = 'none';
+            
+            // Show Success Section
+            successSection.style.display = 'flex';
+            
+            // Start Fireworks
+            startFireworks();
+        });
+
+        // ==========================================
+        // 🌸 BACKGROUND FLOWER ANIMATION
+        // ==========================================
+        function createFlowers() {
+            const flowers = ['🌸', '🌹', '🌺', '🌷', '💖'];
+            const flowerCount = 15;
+
+            for(let i=0; i<flowerCount; i++) {
+                const el = document.createElement('div');
+                el.classList.add('flower-bg');
+                el.textContent = flowers[Math.floor(Math.random() * flowers.length)];
+                
+                // Random positioning
+                el.style.left = Math.random() * 100 + '%';
+                // Random size
+                el.style.fontSize = (Math.random() * 1.5 + 1) + 'rem';
+                // Random animation delay
+                el.style.animationDelay = Math.random() * 5 + 's';
+                // Random duration
+                el.style.animationDuration = (Math.random() * 5 + 8) + 's';
+                
+                bgContainer.appendChild(el);
+            }
+        }
+        createFlowers();
+
+        // ==========================================
+        // 🎆 FIREWORKS ENGINE (Canvas)
+        // ==========================================
+        const canvas = document.getElementById('fireworks-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                // Random velocity
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 4 + 2;
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+                this.life = 100;
+                this.alpha = 1;
+                this.gravity = 0.05;
+            }
+
+            update() {
+                this.vx *= 0.98; // friction
+                this.vy *= 0.98;
+                this.vy += this.gravity;
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life--;
+                this.alpha -= 0.01;
+            }
+
+            draw() {
+                ctx.globalAlpha = Math.max(0, this.alpha);
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function createExplosion(x, y) {
+            const colors = ['#ff4757', '#ff6b81', '#ffa502', '#ffffff', '#7bed9f'];
+            for(let i=0; i<30; i++) {
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                particles.push(new Particle(x, y, color));
+            }
+        }
+
+        function animateFireworks() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Randomly create explosions automatically
+            if(Math.random() < 0.05) {
+                createExplosion(
+                    Math.random() * canvas.width, 
+                    Math.random() * canvas.height * 0.8 // Keep slightly top
+                );
+            }
+
+            // Update particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.update();
+                p.draw();
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+            
+            requestAnimationFrame(animateFireworks);
+        }
+
+        function startFireworks() {
+            // Initial burst
+            createExplosion(window.innerWidth/2, window.innerHeight/2);
+            animateFireworks();
+        }
+
+    </script>
+</body>
+</html>
